@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IPA Signer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .gradient-bg { background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%); min-height: 100vh; }
+        .glass-panel { background: rgba(30, 30, 40, 0.7); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .drop-zone { border: 2px dashed rgba(99, 102, 241, 0.3); transition: all 0.3s ease; }
+        .drop-zone:hover, .drop-zone.drag-over { border-color: #6366f1; background: rgba(99, 102, 241, 0.1); }
+        .drop-zone.success { border-color: #10b981; background: rgba(16, 185, 129, 0.1); }
+        .glow-text { text-shadow: 0 0 20px rgba(99, 102, 241, 0.5); }
+        @keyframes pulse-glow { 0%, 100% { box-shadow: 0 0 20px rgba(99, 102, 241, 0.3); } 50% { box-shadow: 0 0 40px rgba(99, 102, 241, 0.6); } }
+        .animate-pulse-glow { animation: pulse-glow 2s infinite; }
+        .console-log { font-family: 'Courier New', monospace; background: #0a0a0f; border-left: 3px solid #6366f1; }
+        .shake { animation: shake 0.5s; }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+        .loading-bar { background: linear-gradient(90deg, #6366f1, #8b5cf6, #6366f1); background-size: 200% 100%; animation: loading 2s infinite; }
+        @keyframes loading { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+    </style>
+</head>
+<body class="gradient-bg text-white p-4">
+    <div class="max-w-2xl mx-auto pt-8 pb-12 space-y-6">
+        
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <div class="w-16 h-16 mx-auto bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center mb-4 shadow-lg shadow-indigo-500/30">
+                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+            </div>
+            <h1 class="text-4xl font-bold mb-2 bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent glow-text">IPA Signer</h1>
+    
+        </div>
+
+        <!-- Main Form -->
+        <div class="glass-panel rounded-2xl p-8 space-y-6">
+            
+            <!-- IPA Upload -->
+            <div>
+                <label class="block text-sm font-medium text-gray-300 mb-2">1. Upload IPA File</label>
+                <div id="dropZone" class="drop-zone rounded-xl p-8 text-center cursor-pointer relative">
+                    <input type="file" id="ipaFile" accept=".ipa" class="hidden">
+                    <div class="space-y-3">
+                        <div class="w-14 h-14 mx-auto bg-indigo-500/20 rounded-full flex items-center justify-center" id="uploadIcon">
+                            <svg class="w-7 h-7 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+                        </div>
+                        <p class="text-base font-medium text-gray-200" id="dropText">Drop IPA file here</p>
+                        <p class="text-sm text-gray-500">or click to browse</p>
+                        <p class="text-sm text-indigo-400 font-medium hidden" id="fileName"></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- UDID -->
+            <div>
+                <label class="block text-sm font-medium text-gray-300 mb-2">2. Device UDID</label>
+                <div class="relative">
+                    <input type="text" id="udid" placeholder="00008020-001234567890ABCD" 
+                        class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3.5 font-mono text-sm focus:outline-none focus:border-indigo-500 uppercase pr-24" 
+                        maxlength="40">
+                    <button onclick="pasteUDID()" class="absolute right-2 top-1/2 -translate-y-1/2 text-xs bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 px-3 py-1.5 rounded-lg transition-colors">
+                        Paste
+                    </button>
+                </div>
+                <p class="text-xs text-gray-500 mt-1">40 characters</p>
+            </div>
+
+            <!-- Options -->
+            <div class="flex items-center gap-4">
+                <label class="flex items-center gap-3 cursor-pointer">
+                    <input type="checkbox" id="autoRegister" class="w-4 h-4 rounded border-gray-600 bg-black/30 text-indigo-500" checked>
+                    <span class="text-sm text-gray-300">Auto-register new device</span>
+                </label>
+            </div>
+
+            <!-- Sign Button -->
+            <button id="signBtn" onclick="signIPA()" disabled 
+                class="w-full py-4 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl font-bold text-lg shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40 transform hover:scale-[1.02] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 relative overflow-hidden">
+                <span id="btnText">Sign Application</span>
+                <svg id="btnSpinner" class="w-5 h-5 animate-spin hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                <svg id="btnArrow" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l5-5-5-5z"/></svg>
+                <div id="btnLoading" class="absolute inset-0 loading-bar opacity-0 transition-opacity"></div>
+            </button>
+        </div>
+
+        <!-- Console -->
+        <div class="glass-panel rounded-2xl p-4">
+            <div class="flex items-center justify-between mb-3">
+                <span class="text-xs font-medium text-gray-400 uppercase tracking-wider">Live Log</span>
+                <button onclick="clearConsole()" class="text-xs text-gray-500 hover:text-white">Clear</button>
+            </div>
+            <div id="console" class="console-log rounded-lg p-3 h-40 overflow-y-auto text-xs space-y-1.5 text-gray-300 font-mono">
+                <div class="text-gray-500">Ready. Upload IPA and enter UDID...</div>
+            </div>
+        </div>
+
+        <!-- Success Card -->
+        <div id="successCard" class="hidden glass-panel rounded-2xl p-6 animate-pulse-glow border border-green-500/30">
+            <div class="flex items-center gap-4">
+                <div class="w-14 h-14 bg-green-500/20 rounded-full flex items-center justify-center shrink-0">
+                    <svg class="w-7 h-7 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <h3 class="font-bold text-lg text-white truncate" id="successTitle">Signed!</h3>
+                    <p class="text-sm text-gray-400" id="successDetails">Ready for download</p>
+                </div>
+                <button onclick="downloadIPA()" class="px-5 py-2.5 bg-green-600 hover:bg-green-500 rounded-lg font-semibold text-sm transition-colors flex items-center gap-2 shrink-0">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                    Download
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // ==========================================
+        // CONFIGURATION - EDIT THESE VALUES
+        // ==========================================
+        const API_URL = 'https://Bora123.diannaozy.top';
+        const API_KEY = 'EukQiLvCEdaTLFghMVzUtZoGcSFlYQXt';
+        // ==========================================
+
+        // State
+        let currentIPA = null;
+        let signedBlob = null;
+        let signedFilename = null;
+
+        // DOM refs
+        const dropZone = document.getElementById('dropZone');
+        const ipaInput = document.getElementById('ipaFile');
+        const consoleDiv = document.getElementById('console');
+
+        // Drag & Drop
+        dropZone.addEventListener('click', () => ipaInput.click());
+        
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(evt => {
+            dropZone.addEventListener(evt, preventDefaults, false);
+            document.body.addEventListener(evt, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        ['dragenter', 'dragover'].forEach(evt => {
+            dropZone.addEventListener(evt, () => dropZone.classList.add('drag-over'), false);
+        });
+
+        ['dragleave', 'drop'].forEach(evt => {
+            dropZone.addEventListener(evt, () => dropZone.classList.remove('drag-over'), false);
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+        });
+
+        ipaInput.addEventListener('change', (e) => {
+            if (e.target.files.length) handleFile(e.target.files[0]);
+        });
+
+        function handleFile(file) {
+            if (!file.name.toLowerCase().endsWith('.ipa')) {
+                log('Error: File must be an .ipa file', 'error');
+                dropZone.classList.add('shake');
+                setTimeout(() => dropZone.classList.remove('shake'), 500);
+                return;
+            }
+
+            if (file.size > 2 * 1024 * 1024 * 1024) {
+                log('Error: File too large (max 2GB)', 'error');
+                return;
+            }
+
+            currentIPA = file;
+            
+            document.getElementById('dropText').textContent = file.name;
+            document.getElementById('dropText').classList.add('text-indigo-400');
+            document.getElementById('fileName').textContent = formatBytes(file.size);
+            document.getElementById('fileName').classList.remove('hidden');
+            dropZone.classList.add('success');
+            document.getElementById('uploadIcon').innerHTML = '<svg class="w-7 h-7 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>';
+            
+            log(`Loaded: ${file.name} (${formatBytes(file.size)})`, 'success');
+            validateForm();
+        }
+
+        document.getElementById('udid').addEventListener('input', function() {
+            this.value = this.value.toUpperCase().replace(/[^A-F0-9-]/g, '');
+            validateForm();
+        });
+
+        function pasteUDID() {
+            navigator.clipboard.readText().then(text => {
+                const clean = text.toUpperCase().replace(/[^A-F0-9-]/g, '').substring(0, 40);
+                document.getElementById('udid').value = clean;
+                validateForm();
+                log('UDID pasted from clipboard', 'success');
+            }).catch(() => {
+                log('Clipboard access denied', 'error');
+            });
+        }
+
+        function validateForm() {
+            const hasIPA = currentIPA !== null;
+            const hasUDID = document.getElementById('udid').value.length >= 24;
+            document.getElementById('signBtn').disabled = !(hasIPA && hasUDID);
+        }
+
+        async function signIPA() {
+            const udid = document.getElementById('udid').value.trim();
+            const autoRegister = document.getElementById('autoRegister').checked;
+            
+            document.getElementById('successCard').classList.add('hidden');
+            setLoading(true);
+            
+            log('Starting signing process...');
+
+            try {
+                const formData = new FormData();
+                formData.append('ipa', currentIPA, currentIPA.name);
+                formData.append('udid', udid);
+                formData.append('auto_register', autoRegister);
+
+                log(`Uploading to API...`);
+
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${API_KEY}`,
+                        'X-API-Key': API_KEY
+                    },
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    let errorMsg = `HTTP ${response.status}`;
+                    try {
+                        const err = await response.json();
+                        errorMsg = err.message || err.error || errorMsg;
+                    } catch (e) {
+                        errorMsg = await response.text() || errorMsg;
+                    }
+                    throw new Error(errorMsg);
+                }
+
+                const contentType = response.headers.get('content-type') || '';
+                
+                if (contentType.includes('application/json')) {
+                    const result = await response.json();
+                    if (result.success === false) throw new Error(result.message || 'Signing failed');
+
+                    if (result.download_url) {
+                        const fileRes = await fetch(result.download_url);
+                        signedBlob = await fileRes.blob();
+                    } else if (result.signed_ipa) {
+                        const binary = atob(result.signed_ipa);
+                        const bytes = new Uint8Array(binary.length);
+                        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+                        signedBlob = new Blob([bytes], { type: 'application/octet-stream' });
+                    }
+                    
+                    signedFilename = result.filename || currentIPA.name.replace('.ipa', '_signed.ipa');
+                    document.getElementById('successTitle').textContent = result.app_name || 'Signed Successfully';
+                    document.getElementById('successDetails').textContent = `Certificate: ${result.certificate || 'Personal'}`;
+                    
+                } else {
+                    signedBlob = await response.blob();
+                    signedFilename = currentIPA.name.replace('.ipa', '_signed.ipa');
+                    document.getElementById('successTitle').textContent = currentIPA.name.replace('.ipa', '');
+                    document.getElementById('successDetails').textContent = 'Signed and ready';
+                }
+
+                document.getElementById('successCard').classList.remove('hidden');
+                log('Success! IPA signed.', 'success');
+
+            } catch (error) {
+                log(`Error: ${error.message}`, 'error');
+                if (error.message.includes('Failed to fetch')) {
+                    log('→ API may be down or CORS not enabled', 'info');
+                } else if (error.message.includes('UDID')) {
+                    log('→ Try enabling "Auto-register" checkbox', 'info');
+                }
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        function setLoading(loading) {
+            const btn = document.getElementById('signBtn');
+            document.getElementById('btnText').textContent = loading ? 'Signing...' : 'Sign Application';
+            document.getElementById('btnSpinner').classList.toggle('hidden', !loading);
+            document.getElementById('btnArrow').classList.toggle('hidden', loading);
+            document.getElementById('btnLoading').classList.toggle('opacity-0', !loading);
+            btn.disabled = loading;
+        }
+
+        function downloadIPA() {
+            if (!signedBlob) return;
+            const url = URL.createObjectURL(signedBlob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = signedFilename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            log(`Downloaded: ${signedFilename}`, 'success');
+        }
+
+        function log(message, type = 'info') {
+            const time = new Date().toLocaleTimeString();
+            const div = document.createElement('div');
+            let color = 'text-gray-300', icon = '•';
+            if (type === 'error') { color = 'text-red-400'; icon = '✗'; }
+            else if (type === 'success') { color = 'text-green-400'; icon = '✓'; }
+            
+            div.className = `${color} flex items-start gap-2`;
+            div.innerHTML = `<span class="text-gray-600">[${time}]</span><span>${icon}</span><span>${message}</span>`;
+            consoleDiv.appendChild(div);
+            consoleDiv.scrollTop = consoleDiv.scrollHeight;
+        }
+
+        function clearConsole() {
+            consoleDiv.innerHTML = '<div class="text-gray-500">Console cleared...</div>';
+        }
+
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+        }
+    </script>
+</body>
+</html>
